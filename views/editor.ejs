@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Collaborative Code Editor</title>
+    <link rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.20.0/min/vs/editor/editor.main.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+
+<body>
+    <div id="container">
+        <div id="editor-container"></div>
+        <div id="sidebar">
+            <button id="copy-link">Copy Link</button>
+            <select id="language-selector">
+                <option value="javascript">JavaScript</option>
+                <option value="python">Python</option>
+                <option value="html">HTML</option>
+                <option value="css">CSS</option>
+                <option value="markdown">Markdown</option>
+            </select>
+            <select id="theme-selector">
+                <option value="vs-dark">Dark Mode</option>
+                <option value="vs-light">Light Mode</option>
+            </select>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.20.0/min/vs/loader.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.2.1/firebase-database.js"></script>
+    <script>
+        const roomId = "<%= roomId %>";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyAiLIbbIoR8IGPO6HbcsOzu_wBpH8sP2o0",
+            authDomain: "unote-6fb0a.firebaseapp.com",
+            databaseURL: "https://unote-6fb0a-default-rtdb.firebaseio.com",
+            projectId: "unote-6fb0a",
+            storageBucket: "unote-6fb0a.appspot.com",
+            messagingSenderId: "397262650239",
+            appId: "1:397262650239:web:7b9b3b8b0b3b3b3b3b3b3b"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const roomRef = database.ref('rooms/' + roomId);
+
+        require.config({ paths: { 'vs': 'https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.20.0/min/vs' } });
+        require(['vs/editor/editor.main'], function () {
+            const editor = monaco.editor.create(document.getElementById('editor-container'), {
+                value: '',
+                language: 'javascript',
+                theme: 'vs-dark'
+            });
+
+            roomRef.on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    if (data.content !== editor.getValue()) {
+                        editor.setValue(data.content);
+                    }
+                    if (data.language) {
+                        monaco.editor.setModelLanguage(editor.getModel(), data.language);
+                    }
+                }
+            });
+
+            editor.onDidChangeModelContent(() => {
+                roomRef.update({
+                    content: editor.getValue()
+                });
+            });
+
+            document.getElementById('copy-link').addEventListener('click', () => {
+                navigator.clipboard.writeText(window.location.href);
+            });
+
+            document.getElementById('language-selector').addEventListener('change', (e) => {
+                const language = e.target.value;
+                monaco.editor.setModelLanguage(editor.getModel(), language);
+                roomRef.update({ language });
+            });
+
+            document.getElementById('theme-selector').addEventListener('change', (e) => {
+                monaco.editor.setTheme(e.target.value);
+            });
+        });
+    </script>
+</body>
+
+</html>
